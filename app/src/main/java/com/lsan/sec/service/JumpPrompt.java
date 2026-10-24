@@ -189,7 +189,14 @@ public class JumpPrompt {
                             | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                     PixelFormat.TRANSLUCENT);
             params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-            params.y = mono ? dp(10) : dp(44);
+            // 状态栏高度内会裁掉卡片圆角，统一放到安全区下方
+            int statusBar = 0;
+            try {
+                int id = svc.getResources().getIdentifier("status_bar_height", "dimen", "android");
+                if (id > 0) statusBar = svc.getResources().getDimensionPixelSize(id);
+            } catch (Exception ignored) {
+            }
+            params.y = statusBar + (mono ? dp(8) : dp(16));
             params.horizontalMargin = mono ? 0.03f : 0.06f;
 
             root = box;
