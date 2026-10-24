@@ -264,6 +264,13 @@ public class AuditPage implements Page {
                 .setMessage(sb.toString())
                 .setNegativeButton("关闭", null);
 
+        boolean skipOff = Prefs.get().isSkipDisabled(a.pkg);
+        b.setPositiveButton(skipOff ? "恢复对该应用跳过" : "对该应用关闭跳过", (d, w) -> {
+            Prefs.get().setSkipDisabled(a.pkg, !skipOff);
+            Toast.makeText(act, skipOff ? "已恢复跳过" : "已对该应用关闭跳过",
+                    Toast.LENGTH_SHORT).show();
+        });
+
         boolean white = Prefs.get().isWhitelisted(a.pkg);
         b.setNeutralButton(white ? "移出白名单" : "加入白名单", (d, w) -> {
             if (white) Prefs.get().removeWhitelist(a.pkg);
@@ -272,7 +279,7 @@ public class AuditPage implements Page {
         });
 
         if (a.declaresAccessibility || a.declaresNotifListener) {
-            b.setPositiveButton("去权限设置", (d, w) -> {
+            b.setNeutralButton("去权限设置", (d, w) -> {
                 try {
                     act.startActivity(new android.content.Intent(
                             android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS));

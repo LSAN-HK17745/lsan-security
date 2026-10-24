@@ -51,6 +51,65 @@ public class SettingsPage implements Page {
         if (content == null) return;
         content.removeAllViews();
 
+        // ---------- 开屏跳过：适用范围与风险 ----------
+        LinearLayout sk = UiKit.card(act);
+        sk.addView(UiKit.text(act, "开屏跳过：适用范围", 16, UiKit.p().text, true));
+
+        TextView ok1 = UiKit.text(act,
+                "✓ 节点可见的「跳过 / 关闭广告」按钮：有效（已验证）",
+                UiKit.p().smallSp, UiKit.p().textDim, false);
+        ok1.setPadding(0, UiKit.dp(act, 8), 0, 0);
+        sk.addView(ok1);
+
+        TextView no1 = UiKit.text(act,
+                "✗ 广告 SDK 自绘控件（节点树里没有该按钮）：无法点击，属平台限制",
+                UiKit.p().smallSp, UiKit.p().textDim, false);
+        no1.setPadding(0, UiKit.dp(act, 6), 0, 0);
+        sk.addView(no1);
+
+        TextView warn = UiKit.text(act,
+                "⚠ 部分软件的「跳过」本身就是广告位——点击可能触发跳转、下载或打开第三方页面。"
+                        + "本功能只负责点按，无法判断该按钮的真伪，因此对该类应用请单独关闭跳过。",
+                UiKit.p().smallSp + 1, UiKit.p().warn, false);
+        warn.setPadding(0, UiKit.dp(act, 10), 0, UiKit.dp(act, 6));
+        sk.addView(warn);
+
+        TextView skSwitch = UiKit.text(act,
+                "当前「开屏跳过」总开关：" + (Prefs.get().moduleEnabled(com.lsan.sec.core.Modules.SKIP,
+                        com.lsan.sec.core.Modules.find(act, com.lsan.sec.core.Modules.SKIP).defaultOn) ? "开启" : "关闭")
+                        + "（可在「模块」页切换）",
+                UiKit.p().smallSp, UiKit.p().textFaint, false);
+        skSwitch.setPadding(0, UiKit.dp(act, 4), 0, UiKit.dp(act, 8));
+        sk.addView(skSwitch);
+
+        // 已禁用的应用列表
+        java.util.Set<String> skipOff = Prefs.get().skipDisabledPackages();
+        TextView listTitle = UiKit.text(act,
+                "已单独关闭跳过的应用（" + skipOff.size() + "）",
+                UiKit.p().smallSp, UiKit.p().textDim, false);
+        sk.addView(listTitle);
+        if (skipOff.isEmpty()) {
+            TextView empty = UiKit.text(act, "暂无。可在「审计」页点开某个应用 → 关闭跳过。",
+                    UiKit.p().smallSp, UiKit.p().textFaint, false);
+            empty.setPadding(0, UiKit.dp(act, 4), 0, 0);
+            sk.addView(empty);
+        } else {
+            for (String pkg : skipOff) {
+                LinearLayout row = UiKit.horizontal(act);
+                row.setPadding(0, UiKit.dp(act, 5), 0, UiKit.dp(act, 5));
+                row.addView(UiKit.text(act, pkg, UiKit.p().smallSp, UiKit.p().textDim, false),
+                        new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                android.widget.Button en = UiKit.ghost(act, "恢复");
+                en.setOnClickListener(v -> {
+                    Prefs.get().setSkipDisabled(pkg, false);
+                    refresh();
+                });
+                row.addView(en);
+                sk.addView(row);
+            }
+        }
+        content.addView(sk, UiKit.cardLp(act));
+
         // ---------- 拦截档位 ----------
         LinearLayout lvCard = UiKit.card(act);
         lvCard.addView(UiKit.text(act, "拦截档位", 16, UiKit.p().text, true));
@@ -279,13 +338,15 @@ public class SettingsPage implements Page {
 
         // ---------- 关于 ----------
         LinearLayout about = UiKit.card(act);
-        about.addView(UiKit.text(act, "关于墨菲安全", 16, UiKit.p().text, true));
+        about.addView(UiKit.text(act, "关于 LSAN", 16, UiKit.p().text, true));
         TextView info = UiKit.text(act,
-                "版本 1.0.0 · 纯本地个人信息防护\n\n"
+                "版本 " + com.lsan.sec.BuildConfig.VERSION_NAME
+                        + (com.lsan.sec.BuildConfig.DEV_SERVER ? "（DEV · 调试通道开启）" : "")
+                        + " · 纯本地个人信息防护\n\n"
                         + "本应用未声明 INTERNET 权限，在系统层面不具备联网能力；"
                         + "所有规则判定、事件记录与数据存储均在本机完成，不采集、不上传任何信息。\n\n"
-                        + "功能：应用间跳转拦截（弹窗确认）、剪贴板与屏幕敏感信息监控、"
-                        + "应用联合逃逸分析、通知泄露监控、应用权限审计、声明式功能包导入。\n\n"
+                        + "功能：应用间跳转拦截（三档策略，拒绝时终止目标）、剪贴板与屏幕敏感信息监控、"
+                        + "应用联合逃逸分析、通知泄露监控、应用权限审计、开屏跳过、声明式功能包导入。\n\n"
                         + "数据位置：本机私有目录 " + act.getApplicationInfo().dataDir,
                 11, UiKit.p().textDim, false);
         info.setPadding(0, UiKit.dp(act, 8), 0, 0);

@@ -18,8 +18,8 @@ android {
         applicationId "com.lsan.sec"
         minSdk 26
         targetSdk 33
-        versionCode 200
-        versionName "2.0.0"
+        versionCode 220
+        versionName "2.2.0"
         resConfigs "zh", "en"
     }
 

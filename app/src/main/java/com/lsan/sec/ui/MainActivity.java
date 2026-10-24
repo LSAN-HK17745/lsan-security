@@ -146,7 +146,7 @@ public class MainActivity extends Activity implements GuardEngine.Listener {
             brandRow.addView(caret);
             titleBox.addView(brandRow);
 
-            TextView sub = UiKit.text(this, "2026 :: 本地信息防护 :: KERNEL v2.0.0",
+            TextView sub = UiKit.text(this, "2026 :: 本地信息防护 :: KERNEL v" + com.lsan.sec.BuildConfig.VERSION_NAME,
                     10, pal.textFaint, false);
             sub.setLetterSpacing(0.12f);
             sub.setPadding(0, UiKit.dp(this, 4), 0, UiKit.dp(this, 10));

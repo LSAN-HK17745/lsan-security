@@ -1,1 +1,2 @@
-c61a3cef69d9be8a8291dcd4bf7691bf39cef00153c6381cffb45bd29d6ea07a  dist/LSAN-信息防护终端-v2.1.0-release.apk
+6bbbbfa17c1af28d16f827281bc8914f007c768b5872d614f2691deb72799fc7  dist/LSAN-信息防护终端-v2.2.0-dev.apk
+c2fd9681b53dcfd9169eb28e4f37787bbc7f4a5ce46eae88e9404d0aa854430e  dist/LSAN-信息防护终端-v2.2.0-release.apk

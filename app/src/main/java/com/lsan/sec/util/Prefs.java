@@ -164,6 +164,17 @@ public class Prefs {
         p().edit().putBoolean("skip.off." + pkg, disabled).apply();
     }
 
+    /** 列出所有被单独关闭"跳过"的应用。 */
+    public java.util.Set<String> skipDisabledPackages() {
+        java.util.Set<String> out = new java.util.LinkedHashSet<>();
+        for (String k : p().getAll().keySet()) {
+            if (k.startsWith("skip.off.") && p().getBoolean(k, false)) {
+                out.add(k.substring("skip.off.".length()));
+            }
+        }
+        return out;
+    }
+
     /** 跳过尝试窗口（毫秒）。 */
     public int skipWindowMs() { return p().getInt("skip_window", 3000); }
 
