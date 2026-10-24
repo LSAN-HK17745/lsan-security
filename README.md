@@ -115,6 +115,15 @@ echo "sdk.dir=/path/to/android-sdk" > local.properties
 发布签名请自行生成并**不要提交到仓库**（`.gitignore` 已排除 `keystore/`、`*.jks`）。
 Release 构建已启用 R8 + 资源压缩 + 混淆字典（`proguard-rules.pro` / `proguard-dict.txt`）。
 
+## 正式独立版
+
+- 文件：`LSAN-信息防护终端-v2.2.0-正式独立版.apk`
+- 包名 `com.lsan.sec` · versionCode 220 · versionName 2.2.0
+- 签名：`CN=LSAN Security Terminal`（RSA 4096 / PKCS12），证书 SHA-256
+  `CC2156DE35B9820A45F35F3D3DB02D7CEE4DA7D0DA884E6A177458A5DAE50A44`
+- 运行期会校验该指纹：一旦被二次签名或重打包，应用顶部会立即告警并留痕
+- 权限：**不含 `INTERNET`**，无任何联网能力
+
 ## 安装后的授权（系统强制，需手动开启）
 
 1. **无障碍服务**：设置 → 无障碍 → 已下载的应用 → LSAN 信息防护 → 开启

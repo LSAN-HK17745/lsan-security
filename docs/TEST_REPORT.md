@@ -287,3 +287,22 @@ collusion 敏感界面与潜在读屏通道并存：敏感界面B               
 ## 5. 待办
 
 - 若需覆盖自绘广告：接入屏幕取词（OCR）或用户自定义坐标，二者都需权衡误点风险
+
+
+---
+
+# 第六轮：正式独立版打包（v2.2.0）
+
+| 项 | 结果 |
+|---|---|
+| 构建方式 | `gradle clean` 后 `assembleProdRelease`（干净构建） |
+| 包名 / 版本 | `com.lsan.sec` / versionCode 220 / versionName 2.2.0 |
+| 签名 | 新证书 `CN=LSAN Security Terminal`（RSA 4096, PKCS12），SHA-256 `cc2156de…0a44` |
+| 自检指纹 | `Security.EXPECTED_CERT_SHA256` 已同步为该指纹，装机后无完整性告警 |
+| INTERNET 权限 | `aapt2 dump permissions` 计数 = **0** |
+| 真机验证 | 安装启动正常，白主题渲染完整，控制台五页可用 |
+| 体积 | 353 KB |
+
+交付路径：`/mnt/data-m2/桌面/LSAN安全/手机安全/LSAN-信息防护终端-v2.2.0-正式独立版.apk`
+
+> dev 调试版不再放入交付目录，保留在施工器 `/mnt/game-ssd/LSAN安全/dev-builds/`。

@@ -25,9 +25,9 @@ android {
 
     signingConfigs {
         release {
-            storeFile file("../keystore/murphy.jks")
+            storeFile file("../keystore/lsan.jks")
             storePassword signingProps.getProperty("LSAN_STORE_PASS", "")
-            keyAlias signingProps.getProperty("LSAN_KEY_ALIAS", "murphy")
+            keyAlias signingProps.getProperty("LSAN_KEY_ALIAS", "lsan")
             keyPassword signingProps.getProperty("LSAN_KEY_PASS", "")
         }
     }

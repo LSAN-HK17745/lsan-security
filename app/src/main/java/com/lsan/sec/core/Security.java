@@ -26,7 +26,7 @@ public final class Security {
 
     /** 发布证书 SHA-256（自签名证书指纹，二次打包必然变化）。 */
     private static final String EXPECTED_CERT_SHA256 =
-            "602091 46B2C64FA0270956C7BE33F1EB7365D64F0806388773C9136E672985C0".replace(" ", "");
+            "CC2156DE35B9820A45F35F3D3DB02D7CEE4DA7D0DA884E6A177458A5DAE50A44".replace(" ", "");
 
     /** 已知 Hook / 注入框架的特征串（小写）。 */
     private static final String[] HOOK_MARKERS = {
