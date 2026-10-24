@@ -45,6 +45,25 @@ android {
         }
     }
 
+    // dev 变体：额外开启 127.0.0.1 调试通道（正式版不含 INTERNET 权限）
+    flavorDimensions "env"
+    productFlavors {
+        prod {
+            dimension "env"
+            buildConfigField "boolean", "DEV_SERVER", "false"
+        }
+        dev {
+            dimension "env"
+            applicationIdSuffix ".dev"
+            versionNameSuffix "-dev"
+            buildConfigField "boolean", "DEV_SERVER", "true"
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17

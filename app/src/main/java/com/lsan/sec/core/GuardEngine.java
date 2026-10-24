@@ -38,6 +38,26 @@ public class GuardEngine {
     public volatile boolean accessibilityConnected = false;
     /** 通知监听是否已连接。 */
     public volatile boolean notificationConnected = false;
+    /** 最近观察到的窗口切换（dev 调试用，最多 30 条）。 */
+    public final java.util.LinkedList<String> recentWindows = new java.util.LinkedList<>();
+
+    public void noteWindow(String from, String to) {
+        synchronized (recentWindows) {
+            recentWindows.addFirst(System.currentTimeMillis() + " " + from + " -> " + to);
+            while (recentWindows.size() > 30) recentWindows.removeLast();
+        }
+    }
+
+    /** 开屏跳过的调试轨迹（dev 诊断用）。 */
+    public final java.util.LinkedList<String> skipTrace = new java.util.LinkedList<>();
+
+    public void noteSkip(String msg) {
+        synchronized (skipTrace) {
+            skipTrace.addFirst(System.currentTimeMillis() + " " + msg);
+            while (skipTrace.size() > 40) skipTrace.removeLast();
+        }
+    }
+
     /** 自检结果：签名/调试/Hook/模拟器是否全部通过。 */
     public volatile boolean integrityOk = true;
     /** 最近的阻止动作时间（防抖）。 */

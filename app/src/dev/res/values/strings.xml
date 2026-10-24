@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LSAN-信息防护终端 [DEV]</string>
+    <string name="accessibility_label">LSAN 信息防护 [DEV]</string>
+    <string name="notif_label">LSAN 信息防护 [DEV] · 通知监控</string>
+</resources>

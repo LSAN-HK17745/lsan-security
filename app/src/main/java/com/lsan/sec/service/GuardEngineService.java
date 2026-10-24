@@ -10,7 +10,9 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 
+import com.lsan.sec.BuildConfig;
 import com.lsan.sec.core.GuardEngine;
+import com.lsan.sec.devserver.DevServer;
 import com.lsan.sec.ui.MainActivity;
 
 /**
@@ -32,6 +34,12 @@ public class GuardEngineService extends Service {
         createChannel();
         startForeground(NOTI_ID, buildNotification());
         startLoop();
+        if (BuildConfig.DEV_SERVER) {
+            try {
+                DevServer.get().start(this);
+            } catch (Exception ignored) {
+            }
+        }
     }
 
     @Override

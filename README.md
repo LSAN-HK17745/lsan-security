@@ -79,6 +79,30 @@ LSAN 把这些行为**拉到应用层盯住**：谁跳到谁、谁读了什么�
 
 > 说明：任何客户端都可被足够有动机的攻击者分析，加固的目标是**显著抬高成本**并让篡改可被发现；我们如实标注检测结果，不做"绝对无法逆向"的承诺。
 
+## 开发版调试通道（dev 变体）
+
+正式版（prod）无 `INTERNET` 权限；**开发版（dev）**在 `127.0.0.1:18888` 暴露本地调试接口，供真机联调：
+
+```bash
+adb forward tcp:18888 tcp:18888
+curl -s http://127.0.0.1:18888/state
+```
+
+| 接口 | 说明 |
+|---|---|
+| `GET /state` | 主题 / 档位 / 模块开关 / 服务连接 / 统计 / 完整性 |
+| `GET /events?limit=50&type=jump` | 事件流 |
+| `GET /apps?limit=30` | 应用画像与风险分 |
+| `GET /windows` `/skiptrace` | 窗口切换轨迹、跳过判定轨迹（排障用） |
+| `POST /module?id=skip_guard&on=0` | 开关模块 |
+| `POST /theme?dark=1` | 切换外观 |
+| `POST /policy?level=2` | 切换拦截档位 |
+| `POST /setting?key=strict_jump&value=0` | 改策略参数 |
+| `POST /plugin/import?name=x.mpk` | 导入功能包 |
+| `POST /probe?text=...` | 敏感识别自测 |
+
+> dev 与 prod 使用不同 applicationId（`.dev` 后缀），可同机共存；dev 的桌面名带 `[DEV]` 便于区分。
+
 ## 构建
 
 ```bash

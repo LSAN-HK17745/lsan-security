@@ -46,7 +46,9 @@ public class GuardAccessibilityService extends AccessibilityService {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
 
-    private String lastTopPkg = "";
+    /** 进程级"上一个前台应用"：服务被系统重启后仍保留，避免把正常跳转误当基线。 */
+    private static volatile String sLastTopPkg = "";
+    private String lastTopPkg = sLastTopPkg;
     private JumpPrompt prompt;
     private SkipGuard skipGuard;
 
@@ -110,17 +112,22 @@ public class GuardAccessibilityService extends AccessibilityService {
         try {
             Intent home = new Intent(Intent.ACTION_MAIN);
             home.addCategory(Intent.CATEGORY_HOME);
-            List<ResolveInfo> rs = getPackageManager().queryIntentActivities(home,
-                    PackageManager.MATCH_DEFAULT_ONLY);
-            for (ResolveInfo ri : rs) {
-                if (ri.activityInfo != null) launcherPkg = ri.activityInfo.packageName;
+            ResolveInfo def = getPackageManager().resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY);
+            if (def != null && def.activityInfo != null) launcherPkg = def.activityInfo.packageName;
+            if (launcherPkg == null || launcherPkg.isEmpty()) {
+                for (ResolveInfo ri : getPackageManager().queryIntentActivities(home,
+                        PackageManager.MATCH_DEFAULT_ONLY)) {
+                    if (ri.activityInfo != null) launcherPkg = ri.activityInfo.packageName;
+                }
             }
+            if (launcherPkg != null && !launcherPkg.isEmpty()) systemAllow.add(launcherPkg);
         } catch (Exception ignored) {
         }
         try {
             String ime = android.provider.Settings.Secure.getString(
                     getContentResolver(), android.provider.Settings.Secure.DEFAULT_INPUT_METHOD);
             if (ime != null) imePkg = ime.contains("/") ? ime.substring(0, ime.indexOf('/')) : ime;
+            if (imePkg != null && !imePkg.isEmpty()) systemAllow.add(imePkg);
         } catch (Exception ignored) {
         }
     }
@@ -178,7 +185,9 @@ public class GuardAccessibilityService extends AccessibilityService {
 
         String prev = lastTopPkg;
         if (pkg.equals(prev)) return; // 同应用内窗口变化
+        GuardEngine.get().noteWindow(prev, pkg);
         lastTopPkg = pkg;
+        sLastTopPkg = pkg;
         GuardEngine.get().foregroundPkg = pkg;
         GuardEngine.get().lastForegroundPkg = prev;
 
@@ -190,6 +199,8 @@ public class GuardAccessibilityService extends AccessibilityService {
         }
 
         if (prev.isEmpty()) return;                // 首次建立基线
+        // 回到桌面 = 用户退出应用（含按返回键），不属于"应用间跳转"
+        if (!launcherPkg.isEmpty() && pkg.equals(launcherPkg)) return;
         if (isSystemOrAllowed(pkg)) return;        // 目标是系统组件
         if (Prefs.get().isWhitelisted(pkg)) return;
         // 源是系统 UI（桌面 / 侧边栏 / 通知栏 / 最近任务）→ 视为用户主动启动，放行
@@ -292,7 +303,10 @@ public class GuardAccessibilityService extends AccessibilityService {
 
         // 关键：撤回界面之后，把"被跳转到的目标应用"在后端真正终止
         final String target = dst;
-        final boolean hardTerminate = Prefs.get().policyLevel() > 0;
+        // 不对系统组件/桌面/输入法执行终止（避免误杀系统界面）
+        final boolean safeTarget = !isSystemOrAllowed(dst)
+                && (launcherPkg.isEmpty() || !dst.equals(launcherPkg));
+        final boolean hardTerminate = Prefs.get().policyLevel() > 0 && safeTarget;
         handler.postDelayed(() -> {
             JumpKiller.Result kill = hardTerminate
                     ? JumpKiller.terminate(getApplicationContext(), target)
@@ -309,6 +323,7 @@ public class GuardAccessibilityService extends AccessibilityService {
         handler.postDelayed(() -> {
             String cur = GuardEngine.get().foregroundPkg;
             lastTopPkg = cur == null ? "" : cur;
+            sLastTopPkg = lastTopPkg;
         }, 700);
     }
 

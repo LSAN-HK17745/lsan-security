@@ -44,9 +44,9 @@ public final class SkipGuard {
     private static final Pattern SKIP_COUNT = Pattern.compile(
             "(?i)^\\s*(跳过|skip)\\s*(广告)?\\s*\\d*\\s*s?\\s*$");
 
-    private static final long TRY_WINDOW_MS = 5000L;   // 启动后尝试窗口
-    private static final int MAX_TRIES = 5;            // 单次启动最多尝试
-    private static final long TRY_GAP_MS = 600L;       // 两次尝试间隔
+    private static final long TRY_WINDOW_MS = 9000L;   // 启动后尝试窗口
+    private static final int MAX_TRIES = 12;            // 单次启动最多尝试
+    private static final long TRY_GAP_MS = 250L;       // 两次尝试间隔
 
     private final AccessibilityService svc;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -63,7 +63,18 @@ public final class SkipGuard {
     }
 
     /** 窗口切换时调用：记录启动时刻，并在启动窗口内安排多次尝试。 */
+    /** 这些包绝不参与"跳过"：系统通知栏/状态栏/桌面/设置等，否则会误点快捷开关（如飞行模式）。 */
+    private static boolean isExcluded(String pkg) {
+        if (pkg == null) return true;
+        String p = pkg.toLowerCase(java.util.Locale.ROOT);
+        return p.contains("systemui") || p.equals("android") || p.contains("launcher")
+                || p.contains("systemlauncher") || p.contains("settings")
+                || p.contains("notification") || p.contains("sidebar")
+                || p.contains("touch.gesture");
+    }
+
     public void onWindowChanged(String pkg, int screenW, int screenH) {
+        if (isExcluded(pkg)) return;
         long now = System.currentTimeMillis();
         if (!pkg.equals(lastPkg)) {
             lastPkg = pkg;
@@ -83,20 +94,54 @@ public final class SkipGuard {
     private void doAttempt(String pkg, int screenW, int screenH) {
         if (System.currentTimeMillis() - lastClickOkTs < 1500L) return;  // 刚点成功，冷却
         try {
-            AccessibilityNodeInfo root = svc.getRootInActiveWindow();
-            if (root == null) return;
-            CharSequence rootPkg = root.getPackageName();
-            if (rootPkg != null && rootPkg.toString().equals(svc.getPackageName())) {
-                // 当前活动窗口是我们自己的确认浮层，等它消失后再试
-                return;
-            }
+            // 广告常以悬浮窗/独立 Window 的形式出现，必须遍历所有窗口而不只是当前活跃窗口
             List<Candidate> found = new ArrayList<>();
-            collect(root, found, 0);
+            java.util.List<android.view.accessibility.AccessibilityWindowInfo> wins = null;
+            try {
+                wins = svc.getWindows();
+            } catch (Exception ignored) {
+            }
+            if (wins != null && !wins.isEmpty()) {
+                for (android.view.accessibility.AccessibilityWindowInfo w : wins) {
+                    try {
+                        AccessibilityNodeInfo r = w.getRoot();
+                        if (r == null) continue;
+                        try { r.refresh(); } catch (Exception ignored) {}
+                        CharSequence rp = r.getPackageName();
+                        if (rp != null && rp.toString().equals(svc.getPackageName())) {
+                            r.recycle();
+                            continue;   // 跳过我们自己的确认浮层
+                        }
+                        int kids = -1;
+                        try { kids = r.getChildCount(); } catch (Exception ignored) {}
+                        collect(r, found, 0);
+                        GuardEngine.get().noteSkip("  win type=" + w.getType() + " kids=" + kids
+                                + " cls=" + String.valueOf(r.getClassName()));
+                        r.recycle();
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+            GuardEngine.get().noteSkip("attempt pkg=" + pkg + " windows="
+                    + (wins == null ? -1 : wins.size()) + " cands=" + found.size());
+            // 窗口不可见/为空时用活跃窗口兜底
+            if (found.isEmpty()) {
+                AccessibilityNodeInfo root = svc.getRootInActiveWindow();
+                if (root != null) {
+                    try { root.refresh(); } catch (Exception ignored) {}
+                    collect(root, found, 0);
+                    GuardEngine.get().noteSkip("  fallback root kids=" + root.getChildCount()
+                            + " cls=" + String.valueOf(root.getClassName()));
+                    root.recycle();
+                }
+            }
             if (found.isEmpty()) return;
 
             // 优先：文本明确的跳过，其次：边缘的小尺寸关闭按钮
             found.sort((a, b) -> Float.compare(b.score, a.score));
             Candidate best = found.get(0);
+            GuardEngine.get().noteSkip("best='" + best.label + "' score=" + best.score
+                    + " bounds=" + best.bounds.toShortString());
             if (best.score < 1.0f) return;
 
             String key = best.label + "@" + best.bounds.toShortString();
@@ -106,7 +151,14 @@ public final class SkipGuard {
             boolean ok = false;
             AccessibilityNodeInfo node = best.node;
             if (node != null) {
-                ok = node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                try {
+                    ok = node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                } catch (Exception ignored) {
+                }
+                // WebView / 自绘广告控件对 ACTION_CLICK 常无响应，用坐标手势兜底
+                if (!ok) {
+                    ok = tapByGesture(best.bounds);
+                }
                 if (ok) lastClickOkTs = System.currentTimeMillis();
             }
             GuardEngine.get().record(new Event("skip", pkg, "",
@@ -115,6 +167,22 @@ public final class SkipGuard {
                     .detail("控件：文本=\"" + best.label + "\" 区域=" + best.bounds.toShortString()
                             + " 第 " + tries + " 次尝试"));
         } catch (Exception ignored) {
+        }
+    }
+
+    /** 用无障碍手势在控件中心点一下（对 WebView 广告有效）。 */
+    private boolean tapByGesture(Rect r) {
+        try {
+            if (r.width() <= 0 || r.height() <= 0) return false;
+            android.accessibilityservice.GestureDescription.Builder b =
+                    new android.accessibilityservice.GestureDescription.Builder();
+            android.graphics.Path path = new android.graphics.Path();
+            path.moveTo(r.centerX(), r.centerY());
+            b.addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(
+                    path, 0, 60));
+            return svc.dispatchGesture(b.build(), null, null);
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -132,8 +200,11 @@ public final class SkipGuard {
                 node.getBoundsInScreen(r);
                 out.add(new Candidate(node, label, r, score(label, r)));
             }
-            for (int i = 0; i < node.getChildCount(); i++) {
-                AccessibilityNodeInfo c = node.getChild(i);
+            int n = 0;
+            try { n = node.getChildCount(); } catch (Exception ignored) {}
+            for (int i = 0; i < n; i++) {
+                AccessibilityNodeInfo c = null;
+                try { c = node.getChild(i); } catch (Exception ignored) {}
                 if (c != null) {
                     collect(c, out, depth + 1);
                     c.recycle();

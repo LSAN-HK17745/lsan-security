@@ -43,6 +43,7 @@ public class MainActivity extends Activity implements GuardEngine.Listener {
     private Page[] pages;
     private View[] pageViews;
     private int current = 0;
+    private boolean builtDark = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +51,7 @@ public class MainActivity extends Activity implements GuardEngine.Listener {
         Prefs.get().init(this);
         GuardEngine.get().init(this);
         UiKit.attach(this);
+        builtDark = Theme.dark(this);
         requestNotifPermission();
 
         Theme.Palette pal = UiKit.p();
@@ -494,6 +496,11 @@ public class MainActivity extends Activity implements GuardEngine.Listener {
     @Override
     protected void onResume() {
         super.onResume();
+        // 外观被外部改动（调试接口 / 其它入口）时，重建界面保证配色与组件一致
+        if (Theme.dark(this) != builtDark) {
+            recreate();
+            return;
+        }
         GuardEngine.get().register(this);
         updateHeader();
         refreshCurrent();
