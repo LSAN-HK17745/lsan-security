@@ -15,9 +15,14 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.lsan.sec.ui.Theme;
+
 /**
- * 跳转确认弹窗：以无障碍浮层（TYPE_ACCESSIBILITY_OVERLAY）呈现，
- * 不需要"显示在其他应用上层"权限，也不会被普通应用覆盖。
+ * 跳转确认浮层（TYPE_ACCESSIBILITY_OVERLAY，无需悬浮窗权限）。
+ *
+ * 视觉与主界面同源：
+ *  - 终端黑：窗口标题栏 + 等宽字体 + 1px 灰线 + 方角 + 白底黑字反色主按钮
+ *  - 极简白：大字标题 + 宽留白 + 细线 + 黑底白字主按钮
  */
 public class JumpPrompt {
 
@@ -54,69 +59,112 @@ public class JumpPrompt {
         dismissed = false;
         remain = Math.max(1, seconds);
 
+        Theme.Palette pal = Theme.p(svc);
+        boolean mono = pal.mono;
+
         try {
             wm = (WindowManager) svc.getSystemService(AccessibilityService.WINDOW_SERVICE);
 
             LinearLayout box = new LinearLayout(svc);
             box.setOrientation(LinearLayout.VERTICAL);
             GradientDrawable bg = new GradientDrawable();
-            bg.setColor(0xFF111A2B);
-            bg.setCornerRadius(dp(20));
-            bg.setStroke(dp(1), 0xFF2B3B57);
+            bg.setColor(pal.surface);
+            bg.setCornerRadius(dp(pal.cardRadiusDp));
+            bg.setStroke(dp(1), pal.stroke);
             box.setBackground(bg);
-            int pad = dp(18);
-            box.setPadding(pad, pad, pad, dp(12));
+            int pad = mono ? dp(14) : dp(20);
+            box.setPadding(pad, pad, pad, mono ? dp(12) : dp(16));
 
-            TextView tag = new TextView(svc);
-            tag.setText(silent ? "静默跳转拦截   ·   无用户操作" : "应用间跳转确认");
-            tag.setTextColor(silent ? 0xFFFF5C6C : 0xFF38E1B0);
-            tag.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            tag.setTypeface(Typeface.DEFAULT_BOLD);
-            box.addView(tag);
+            // ---------- 标题区 ----------
+            if (mono) {
+                LinearLayout bar = new LinearLayout(svc);
+                bar.setOrientation(LinearLayout.HORIZONTAL);
+                bar.setGravity(Gravity.CENTER_VERTICAL);
+                TextView dots = tv("○  ○  ○", pal.smallSp - 1, pal.textFaint, false, true);
+                dots.setLetterSpacing(0.2f);
+                bar.addView(dots);
+                TextView path = tv("LSAN :: INTERCEPT", pal.smallSp - 1, pal.textDim, false, true);
+                path.setLetterSpacing(0.24f);
+                path.setGravity(Gravity.CENTER);
+                bar.addView(path, new LinearLayout.LayoutParams(0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+                TextView flag = tv(silent ? "[SILENT]" : "[ASK]", pal.smallSp - 1,
+                        silent ? pal.danger : pal.text, true, true);
+                bar.addView(flag);
+                box.addView(bar);
 
-            TextView path = new TextView(svc);
-            path.setText(srcLabel + "  →  " + dstLabel);
-            path.setTextColor(0xFFE8EFF9);
-            path.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
-            path.setTypeface(Typeface.DEFAULT_BOLD);
-            path.setPadding(0, dp(8), 0, dp(2));
-            box.addView(path);
+                View line = new View(svc);
+                line.setBackgroundColor(pal.stroke);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, Math.max(1, dp(1)));
+                lp.setMargins(0, dp(8), 0, dp(10));
+                box.addView(line, lp);
 
-            TextView pkgs = new TextView(svc);
-            pkgs.setText(srcPkg + "  →  " + dstPkg);
-            pkgs.setTextColor(0xFF8FA2BE);
-            pkgs.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
-            box.addView(pkgs);
+                TextView head = tv("> 应用间跳转被拦截", pal.bodySp + 2, pal.text, true, true);
+                box.addView(head);
 
-            TextView hint = new TextView(svc);
-            hint.setText("应用之间正在相互唤起。拒绝将立即返回上一层界面；"
-                    + "允许则放行本次访问。");
-            hint.setTextColor(0xFF8FA2BE);
-            hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            hint.setPadding(0, dp(10), 0, dp(10));
-            box.addView(hint);
+                TextView pair = tv(srcLabel + "  →  " + dstLabel, pal.bodySp, pal.text, false, true);
+                pair.setPadding(0, dp(6), 0, 0);
+                box.addView(pair);
 
-            final TextView count = new TextView(svc);
-            count.setText(remain + " 秒后自动终止");
-            count.setTextColor(0xFFFFB020);
-            count.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            count.setPadding(0, 0, 0, dp(10));
+                TextView pkgs = tv(srcPkg + "\n→ " + dstPkg, pal.smallSp - 1, pal.textFaint, false, true);
+                pkgs.setPadding(0, dp(4), 0, dp(8));
+                box.addView(pkgs);
+
+                TextView hint = tv(silent
+                                ? "// 无用户操作，可能是后台唤起 → 建议终止"
+                                : "// 你刚点过页面，若确实要访问则放行",
+                        pal.smallSp, silent ? pal.warn : pal.textDim, false, true);
+                box.addView(hint);
+            } else {
+                TextView tag = tv(silent ? "静默跳转" : "应用间跳转", 12,
+                        silent ? pal.danger : pal.textFaint, true, false);
+                box.addView(tag);
+
+                TextView pair = tv(srcLabel + " → " + dstLabel, 22, pal.text, true, false);
+                pair.setPadding(0, dp(8), 0, dp(4));
+                box.addView(pair);
+
+                TextView pkgs = tv(srcPkg + "  →  " + dstPkg, 11, pal.textFaint, false, false);
+                box.addView(pkgs);
+
+                TextView hint = tv(silent
+                                ? "没有任何操作就发生了唤起。终止会立即返回上一层。"
+                                : "这是你自己操作触发的跳转，可以直接放行。",
+                        13, pal.textDim, false, false);
+                hint.setPadding(0, dp(14), 0, dp(6));
+                hint.setLineSpacing(dp(4), 1f);
+                box.addView(hint);
+            }
+
+            // ---------- 倒计时 ----------
+            final TextView count = tv(mono ? "// " + remain + "s 后自动终止" : remain + " 秒后自动终止",
+                    pal.smallSp + (mono ? 0 : 1), pal.warn, mono, mono);
+            count.setPadding(0, dp(mono ? 8 : 10), 0, dp(mono ? 10 : 14));
             box.addView(count);
+
+            // ---------- 按钮 ----------
+            String blockText = mono ? "终止" : "终止跳转";
+            String onceText = mono ? "仅本次" : "仅本次允许";
+            String foreverText = mono ? "永久允许" : "永久放行";
+
+            Button block = mkButton(blockText, pal.accent, pal.accentInk, true, mono, pal);
+            Button once = mkButton(onceText, pal.surfaceAlt, pal.text, false, mono, pal);
+            Button forever = mkButton(foreverText, pal.surfaceAlt, pal.text, false, mono, pal);
 
             LinearLayout row = new LinearLayout(svc);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
-
-            Button block = makeButton("终止跳转", 0xFF2A1A22, 0xFFFF5C6C);
-            Button once = makeButton("仅本次", 0xFF1B2840, 0xFFE8EFF9);
-            Button forever = makeButton("永久允许", 0xFF1E8F71, 0xFF04150F);
-
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,
+            LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT, 1.15f);
+            blp.setMargins(0, 0, dp(mono ? 6 : 10), 0);
+            row.addView(block, blp);
+            LinearLayout.LayoutParams olp = new LinearLayout.LayoutParams(0,
                     LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-            lp.setMargins(dp(4), 0, dp(4), 0);
-            row.addView(block, lp);
-            row.addView(once, lp);
-            row.addView(forever, lp);
+            olp.setMargins(0, 0, dp(mono ? 6 : 10), 0);
+            row.addView(once, olp);
+            row.addView(forever, new LinearLayout.LayoutParams(0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
             box.addView(row);
 
             block.setOnClickListener(v -> {
@@ -141,9 +189,8 @@ public class JumpPrompt {
                             | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                     PixelFormat.TRANSLUCENT);
             params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-            params.y = dp(48);
-            params.horizontalMargin = 0.06f;
-            params.windowAnimations = android.R.style.Animation_Dialog;
+            params.y = mono ? dp(10) : dp(44);
+            params.horizontalMargin = mono ? 0.03f : 0.06f;
 
             root = box;
             wm.addView(root, params);
@@ -156,7 +203,54 @@ public class JumpPrompt {
         }
     }
 
+    private TextView tv(String s, float sp, int color, boolean bold, boolean mono) {
+        TextView t = new TextView(svc);
+        t.setText(s);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
+        t.setTextColor(color);
+        if (mono) {
+            try {
+                t.setTypeface(svc.getResources().getFont(
+                        bold ? com.lsan.sec.R.font.jb_mono_bold : com.lsan.sec.R.font.jb_mono));
+            } catch (Exception e) {
+                t.setTypeface(Typeface.create(Typeface.MONOSPACE, bold ? Typeface.BOLD : Typeface.NORMAL));
+            }
+            t.setLetterSpacing(0.02f);
+        } else {
+            t.setTypeface(Typeface.create(Typeface.SANS_SERIF, bold ? Typeface.BOLD : Typeface.NORMAL));
+        }
+        return t;
+    }
+
+    private Button mkButton(String text, int bg, int fg, boolean primary, boolean mono,
+                            Theme.Palette pal) {
+        Button b = new Button(svc);
+        b.setText(mono ? (primary ? "▸ " + text : text) : text);
+        b.setAllCaps(false);
+        b.setTextSize(TypedValue.COMPLEX_UNIT_SP, mono ? pal.smallSp + 1 : 14);
+        b.setTextColor(fg);
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(bg);
+        d.setCornerRadius(dp(mono ? 0 : 14));
+        if (!primary) d.setStroke(dp(1), mono ? pal.stroke : 0xFFDDDDE2);
+        b.setBackground(d);
+        b.setPadding(dp(mono ? 8 : 12), dp(mono ? 9 : 12), dp(mono ? 8 : 12), dp(mono ? 9 : 12));
+        b.setStateListAnimator(null);
+        b.setMinHeight(0);
+        b.setMinimumHeight(dp(mono ? 38 : 46));
+        b.setMinWidth(0);
+        b.setMinimumWidth(0);
+        if (mono) {
+            try {
+                b.setTypeface(svc.getResources().getFont(com.lsan.sec.R.font.jb_mono));
+            } catch (Exception ignored) {
+            }
+        }
+        return b;
+    }
+
     private void startCountdown(TextView count) {
+        final boolean mono = Theme.p(svc).mono;
         tick = new Runnable() {
             @Override public void run() {
                 if (dismissed) return;
@@ -166,29 +260,11 @@ public class JumpPrompt {
                     cb.onBlock();
                     return;
                 }
-                count.setText(remain + " 秒后自动终止");
+                count.setText(mono ? "// " + remain + "s 后自动终止" : remain + " 秒后自动终止");
                 handler.postDelayed(this, 1000);
             }
         };
         handler.postDelayed(tick, 1000);
-    }
-
-    private Button makeButton(String text, int bg, int fg) {
-        Button b = new Button(svc);
-        b.setText(text);
-        b.setAllCaps(false);
-        b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        b.setTextColor(fg);
-        GradientDrawable d = new GradientDrawable();
-        d.setColor(bg);
-        d.setCornerRadius(dp(12));
-        d.setStroke(dp(1), 0x22FFFFFF);
-        b.setBackground(d);
-        b.setPadding(dp(6), dp(10), dp(6), dp(10));
-        b.setStateListAnimator(null);
-        b.setMinHeight(0);
-        b.setMinimumHeight(0);
-        return b;
     }
 
     public void dismiss() {
