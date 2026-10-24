@@ -138,4 +138,8 @@ app/src/main/java/com/lsan/sec/
 
 ## 仓库
 
-GitHub：`https://github.com/<owner>/lsan-security`（首次推送后更新）
+GitHub：**https://github.com/LSAN-HK17745/lsan-security**
+
+- 最新版本：`v2.1.0` — [下载 APK](https://github.com/LSAN-HK17745/lsan-security/releases/download/v2.1.0/LSAN-Security-v2.1.0-release.apk)
+- 发布页：https://github.com/LSAN-HK17745/lsan-security/releases
+- 官网参考：https://whitemeow.top/timetable/（深色外观的设计语言来源）
