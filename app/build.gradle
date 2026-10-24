@@ -1,0 +1,66 @@
+plugins {
+    id 'com.android.application'
+}
+
+// 签名口令等敏感信息从 local.properties 读取（该文件不纳入版本库）
+def signingProps = new Properties()
+def lprops = rootProject.file('local.properties')
+if (lprops.exists()) {
+    lprops.withInputStream { signingProps.load(it) }
+}
+
+android {
+    namespace 'com.lsan.sec'
+    compileSdk 34
+    buildToolsVersion "34.0.0"
+
+    defaultConfig {
+        applicationId "com.lsan.sec"
+        minSdk 26
+        targetSdk 33
+        versionCode 200
+        versionName "2.0.0"
+        resConfigs "zh", "en"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file("../keystore/murphy.jks")
+            storePassword signingProps.getProperty("LSAN_STORE_PASS", "")
+            keyAlias signingProps.getProperty("LSAN_KEY_ALIAS", "murphy")
+            keyPassword signingProps.getProperty("LSAN_KEY_PASS", "")
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+        debug {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+
+    // 明确不引入任何第三方依赖：纯平台 API，保证零外联能力
+    dependenciesInfo {
+        includeInApk false
+        includeInBundle false
+    }
+}
+
+dependencies {
+}

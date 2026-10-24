@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LSAN-信息防护终端</string>
+    <string name="accessibility_label">LSAN 信息防护</string>
+    <string name="accessibility_description">用于识别应用之间的跳转行为、监控屏幕敏感信息与联合窃取行为。所有数据仅保存在本机，本应用无联网能力。</string>
+    <string name="notif_label">LSAN 信息防护 · 通知监控</string>
+</resources>
